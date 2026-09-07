@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Continuous and Differentiable Neural Network Representations of the Surfzone Sea-Surface from Lidar Point Clouds</title>
+<meta name="description" content="Culver, Feddersen &amp; Morzfeld — a SIREN neural network gives a continuous, differentiable, grid-free representation of the surfzone sea-surface from UAS multi-beam lidar point clouds.">
+<meta name="author" content="David Robert Culver, Falk Feddersen, Matthias Morzfeld">
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css" crossorigin="anonymous" referrerpolicy="no-referrer">
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+<header class="masthead">
+  <div class="masthead-inner">
+    <h1 class="paper-title">Continuous and Differentiable Neural Network Representations of the Surfzone Sea-Surface from Lidar Point Clouds</h1>
+    <p class="authors">
+      David Robert Culver<sup>a</sup>, Falk Feddersen<sup>a</sup>, Matthias Morzfeld<sup>a</sup>
+    </p>
+    <p class="affiliation">
+      <sup>a</sup> Scripps Institution of Oceanography, University of California, San Diego, La Jolla, California
+    </p>
+
+      <p class="affiliation">
+      This paper was submitted to American Meteorological Society (AMS) Journal of Atmospheric and Oceanic Technology on September 4th, 2026. It has not gone through peer review and is not yet published.
+    </p>
+  </div>
+</header>
+
+<div class="layout">
+
+  <!-- ───────────────────────── sidebar ───────────────────────── -->
+  <aside class="sidebar">
+    <nav id="toc" aria-label="Table of contents">
+
+      <div class="toc-head-row">
+        <p class="toc-head" id="toc-head-contents">Contents</p>
+        <button class="toc-toggle" type="button" aria-expanded="true"
+                aria-controls="toc-contents" aria-labelledby="toc-head-contents">
+          <span class="caret" aria-hidden="true"></span>
+        </button>
+      </div>
+
+      <ol class="toc-list" id="toc-contents">
+        <li><a href="#abstract">Abstract</a></li>
+        <li><a href="#statement">Significance statement</a></li>
+        <li><a href="#sec-intro"><span class="toc-n">1</span>Introduction</a></li>
+
+        <li class="toc-group">
+          <div class="toc-row">
+            <a href="#sec-methods" id="toc-l-methods"><span class="toc-n">2</span>Methods</a>
+            <button class="toc-toggle" type="button" aria-expanded="true"
+                    aria-controls="toc-g-methods" aria-labelledby="toc-l-methods">
+              <span class="caret" aria-hidden="true"></span>
+            </button>
+          </div>
+          <ol id="toc-g-methods">
+            <li><a href="#sec-exp-over"><span class="toc-n">a</span>Lidar and experiment overview</a></li>
+            <li><a href="#sec-siren"><span class="toc-n">b</span>Modeling lidar data by SIRENs</a></li>
+          </ol>
+        </li>
+
+        <li class="toc-group">
+          <div class="toc-row">
+            <a href="#sec-results" id="toc-l-results"><span class="toc-n">3</span>Results</a>
+            <button class="toc-toggle" type="button" aria-expanded="true"
+                    aria-controls="toc-g-results" aria-labelledby="toc-l-results">
+              <span class="caret" aria-hidden="true"></span>
+            </button>
+          </div>
+          <ol id="toc-g-results">
+            <li><a href="#sec-errors"><span class="toc-n">a</span>SIREN reconstructions</a></li>
+            <li><a href="#sec-residuals"><span class="toc-n">b</span>Reproducibility</a></li>
+          </ol>
+        </li>
+
+        <li class="toc-group">
+          <div class="toc-row">
+            <a href="#sec-wave-analysis" id="toc-l-wave"><span class="toc-n">4</span>SIRENs for wave analysis</a>
+            <button class="toc-toggle" type="button" aria-expanded="true"
+                    aria-controls="toc-g-wave" aria-labelledby="toc-l-wave">
+              <span class="caret" aria-hidden="true"></span>
+            </button>
+          </div>
+          <ol id="toc-g-wave">
+            <li><a href="#sec-hov"><span class="toc-n">a</span>Space&ndash;time analysis</a></li>
+            <li><a href="#sec-deriv"><span class="toc-n">b</span>Derivatives</a></li>
+          </ol>
+        </li>
+
+        <li class="toc-group">
+          <div class="toc-row">
+            <a href="#sec-disc" id="toc-l-disc"><span class="toc-n">5</span>Discussion and summary</a>
+            <button class="toc-toggle" type="button" aria-expanded="true"
+                    aria-controls="toc-g-disc" aria-labelledby="toc-l-disc">
+              <span class="caret" aria-hidden="true"></span>
+            </button>
+          </div>
+          <ol id="toc-g-disc">
+            <li><a href="#sec-merits"><span class="toc-n">a</span>Merits and limitations</a></li>
+            <li><a href="#sec-xav-sir"><span class="toc-n">b</span>Xavier vs SIREN initialization</a></li>
+            <li><a href="#sec-summary"><span class="toc-n">c</span>Summary</a></li>
+          </ol>
+        </li>
+
+        <li><a href="#acknowledgments">Acknowledgments</a></li>
+        <li><a href="#references">References</a></li>
+      </ol>
+
+      <div class="toc-head-row toc-head-figs">
+        <p class="toc-head" id="toc-head-figures">Figures</p>
+        <button class="toc-toggle" type="button" aria-expanded="true"
+                aria-controls="toc-figures" aria-labelledby="toc-head-figures">
+          <span class="caret" aria-hidden="true"></span>
+        </button>
+      </div>
+
+      <ol class="toc-figs" id="toc-figures">
+        <li><a href="#fig-map">1 &middot; Bathymetry</a></li>
+        <li><a href="#fig-data-plot">2 &middot; Lidar over RGB image</a></li>
+        <li><a href="#fig-nn-v-data">3 &middot; Lidar vs SIREN</a></li>
+        <li><a href="#fig-error-hist">4 &middot; Error histograms</a></li>
+        <li><a href="#fig-error-density">5 &middot; Error vs data density</a></li>
+        <li><a href="#fig-analysis">6 &middot; Two-SIREN residuals</a></li>
+        <li><a href="#fig-res-density">7 &middot; Residual vs density</a></li>
+        <li><a href="#fig-hovmoller">8 &middot; Hovm&ouml;ller diagram</a></li>
+        <li><a href="#fig-derivative">9 &middot; Derivatives</a></li>
+        <li><a href="#fig-init">10 &middot; Native SIREN init</a></li>
+      </ol>
+    </nav>
+  </aside>
+
+  <!-- ───────────────────────── article ───────────────────────── -->
+  <main class="paper">
+
+    <section id="abstract" class="block abstract">
+      <h2>Abstract</h2>
+      <p>Ocean waves are often analyzed via sea-surface observations. Multi-beam scanning lidar enables two-dimensional measurements of the water surface $\eta(x,y)$ via sequenced point clouds of sea-surface elevation. Point cloud data, however, have to be gridded, interpolated, or mapped for use in wave analysis. We present and test a method for creating a continuous and differentiable (space and time), but grid-free, representation of the sea-surface from time sequenced lidar point clouds. We use a specific neural network architecture, a SIREN, to represent the sea-surface and to train the network on spatiotemporal 60&nbsp;s of lidar data collected by a gas-electric UAS (drone) hovering over large (4 m), breaking waves in Monterey, California. The trained SIREN allows estimation of the sea-surface and its derivatives at any location and time. SIREN sea-surface representations tend to filter the highest wave number variability (splash-up and sea-spray). SIREN errors are comparable to instrument errors and insensitive to local data density. The reliability and reproducibility of our approach is tested by training two SIRENs independently on the same data. Differences between the two independent SIRENs are comparable to instrument error, but increase in data-poor regions. SIRENs' potential for directional wave analysis is demonstrated by computing spatial and temporal derivatives and by estimating wave velocity from a SIREN-generated space-time slice of the sea-surface.</p>
+    </section>
+
+    <section id="statement" class="block statement">
+      <h2>Significance statement</h2>
+      <p>Observations of the sea-surface are often used to study ocean waves. The two-dimensional sea-surface can be measured with lidar. However, for analysis, the point cloud of data must be mapped or interpolated. Here, we present a method, that uses a SIREN neural network architecture, to create a space and time continuous and differentiable representation of the sea surface from lidar point cloud data. We train this SIREN on hovering drone data of large ocean waves. The resulting SIREN sea-surface representation has errors largely consistent with the instrument errors. Examples are given on how the SIREN sea-surface representation can be useful for wave analysis.</p>
+    </section>
+
+    <!-- ═══════════════ 1. Introduction ═══════════════ -->
+    <section id="sec-intro" class="block">
+      <h2><span class="sec-n">1.</span>Introduction</h2>
+
+      <p>Ocean waves have long been studied via analysis of sea-surface observations. For example, surface pitch and roll wave buoys have been used to estimate wave spectra and wave directional moments at a specific location <span class="cite" data-keys="longuet1963,kuik_method_1988"></span>. Remote sensing of the sea surface, either by lidar <span class="cite" data-prefix="e.g.," data-keys="Melville2016JTECH"></span> or stereo photogrammetry <span class="cite" data-prefix="e.g.," data-keys="bergamasco_wass_2017"></span>, can provide time-varying point-clouds of the sea-surface. In the nearshore, where the waves are steep and changing rapidly, lidar or stereo photogrammetry point clouds of the sea-surface have been used to visualize a wide range of wave processes from wave steepening, to overturning, the subsequent splash-up, bore propagation and swash <span class="cite" data-prefix="e.g.," data-keys="brodie_lidar_2015,Odea2021GRL,jaudMeasuringNearshoreWaves2024,Davey2026submit"></span>. In the nearshore, single beam scanning lidars mounted on shore or on piers have been used to measure the temporal ($t$) and cross-shore ($x$) varying sea-surface $\eta(x,t)$ across the surf and swash zones <span class="cite" data-prefix="e.g.," data-keys="BLENKINSOPP2010,fiedler_observations_2015,MARTINS2017"></span>. Single beam scanning lidars were also mounted on uncrewed aircraft system (UAS) with real-time positioning capability, enabling high grazing angles and better data quality <span class="cite" data-keys="Huang2018JTECH,Fiedler2021JTECH"></span>. Multi-beam scanning lidar allows for the two-dimensional ($x,y$) measurement of the water surface. Such lidars have been used to observe wave overturning in both field <span class="cite" data-keys="Odea2021GRL"></span> and field-scale laboratory <span class="cite" data-keys="Feddersen2023JFM"></span> settings. A multi-beam scanning lidar mounted on a UAS was able to reproduce directional wave statistics from a wave buoy in 10&nbsp;m water depth <span class="cite" data-keys="feddersen_estimating_2024"></span>.</p>
+
+      <p>For use in analysis of waves, point cloud data must first be gridded, mapped, or fit to functional forms. For example, $\eta(x,y,t)$ at discrete resolution has been estimated from despiked and gridded/interpolated single beam scanning lidar point clouds at 0.1&nbsp;m cross-shore resolution and at a time resolution defined by the lidar sampling rate <span class="cite" data-keys="brodie_lidar_2015,MARTINS2017,Fiedler2021JTECH"></span>. Wave overturning geometry was quantified by fitting a subset of point cloud data to a specific functional form <span class="cite" data-keys="Odea2021GRL,Feddersen2023JFM"></span>. Multi-beam lidar point cloud data within a small circular region was fit to a plane and 2D parabola to estimate $\eta(t)$ and its derivatives $\detadx$ and $\detady$ at specific locations <span class="cite" data-keys="feddersen_estimating_2024"></span>.</p>
+
+      <p>Various types of wave analysis require estimates of $\eta(x,y,t)$ and its spatial and temporal derivatives. Nonlinear amplitude dispersion analysis <span class="cite" data-keys="Herbers2002JPO,Martins2021JPO"></span>, for example, requires estimating spectra of $\eta$, and its spatial derivatives $\detadx$, and $\detady$. Analysis of the surface kinematic boundary condition requires estimating the temporal derivative $\partial \eta/\partial t$. We describe how to use a certain type of neural network (NN) as a continuous, grid-free functional representation of the sea-surface $\eta(x,y,t)$, reconstructed from point cloud data (multi-beam lidar), whose value and spatiotemporal derivatives can be estimated anywhere within a space-time domain.</p>
+
+      <p>NNs are parameterized functions that can continuously and differentially map inputs to outputs <span class="cite" data-prefix="e.g.," data-keys="goodfellow_deep_2016"></span>. In computer graphics, coordinate based NNs re-render images by evaluating pixel coordinates either as grayscale or RGB, and more sophisticated coordinates can be used to reconstruct 3D shapes <span class="cite" data-keys="park_deepsdf_2019,chen_learning_2019"></span>. Coordinate based NNs trained to minimize data mismatch are known as implicit neural representations (INR), and have a wide range of applications <span class="cite" data-keys="mildenhall_nerf_2020,tewari_advances_2022"></span>. INR construction was improved using sinusoidal representation networks (SIREN) which leverage periodic activation functions in the NN design <span class="cite" data-keys="sitzmann_implicit_2020,novello_understanding_2023,ngom_fourier_2021"></span>. SIREN representations produce images at higher quality in both the signal and its derivatives <span class="cite" data-keys="sitzmann_implicit_2020"></span>. SIRENs can also be used for solving partial differential equations <span class="cite" data-keys="catalani_neural_2024"></span> or for compressing large video files and point clouds <span class="cite" data-prefix="e.g.," data-keys="zhang2021implicitneuralvideocompression,kwan_enhanced_2026,kwan_immersive_2024,rho_neural_2022,zhang_efficient_2025"></span>, and the training process can leverage derivative information as well <span class="cite" data-keys="yuan_sobolev_2022"></span>.</p>
+
+      <p>The continuity and differentiability of SIREN reconstructions offer desirable properties for mapping the sea-surface, especially when compared to grid-based approaches. Here, we describe in detail how to use a coordinate based SIREN for continuous and differentiable, grid-free representations of the sea-surface $\eta(x,y,t)$, obtained from lidar point cloud data.</p>
+
+      <p>The rest of this paper is organized as follows. We describe the data collection in <a href="#sec-exp-over" class="xref">Section&nbsp;2a</a>: A multibeam lidar mounted on a UAS was flown over the surf zone of a rocky shore during a large swell-event. The design, architecture and training procedure of the SIREN is explained in <a href="#sec-siren" class="xref">Section&nbsp;2b</a>. A subset of the data were withheld from the training process, which is then used to study errors in the SIREN representation of $\eta(x,y,t)$ in <a href="#sec-errors" class="xref">Section&nbsp;3a</a>. We examine the reliability and reproducibility of SIREN sea-surface representations in <a href="#sec-residuals" class="xref">Section&nbsp;3b</a>. In <a href="#sec-wave-analysis" class="xref">Section&nbsp;4</a>, we show examples of the SIREN reconstructed $\eta(x,y,t)$ and its derivatives to demonstrate the potential of the new method. In <a href="#sec-disc" class="xref">Section&nbsp;5</a>, we discuss the advantages and disadvantages of using SIREN representations compared to existing approaches, discuss the effects of different initialization schemes for training, and provide a summary.</p>
+    </section>
+
+    <!-- ═══════════════ 2. Methods ═══════════════ -->
+    <section id="sec-methods" class="block">
+      <h2><span class="sec-n">2.</span>Methods</h2>
+
+      <figure id="fig-map" class="fig fig-narrow">
+        <div class="fig-frame"><img src="assets/figures/BathyFig.png" alt="Bathymetry map of the China Rock region showing cross-shore x and alongshore y coordinates, with the Spotter wave buoy marked in yellow and the UAS hover location in magenta." loading="lazy" width="1181" height="851"></div>
+        <figcaption><span class="fig-label">Fig. 1.</span> Bathymetry ($z$, meters relative to mean sea level) at the China Rock region (Monterey Peninsula, CA, USA) as a function of local cross-shore $x$ and along-shore $y$ coordinates. The origin is located at 36.6044$^\circ$ and &minus;121.9594$^\circ$. The yellow circle represents the location of the Spotter wave buoy at $(x,y)=(-823,-30)$&nbsp;m and the magenta circle indicates the location of the UAS hover $(x,y)=(-203,-161)$&nbsp;m. Regions in white indicate locations with no bathymetric observations.</figcaption>
+      </figure>
+
+      <h3 id="sec-exp-over"><span class="sec-n">a.</span>Lidar and Experiment Overview</h3>
+
+      <p>We use data collected by an eight-rotor Skyfront Perimeter 8 UAS, equipped with a lidar and an Inertial Navigation System (INS). The lidar and UAS were previously reported in <span class="cite" data-style="t" data-keys="feddersen_estimating_2024"></span>. A RTK-GNSS module allows the UAS to maintain its position without drifting over time. The UAS payload is a Phoenix lidar Systems (PLS) Scout Ultra, which houses a Velodyne Ultra Puck (VLP-32c) lidar, a 24-MP Sony A6K-Lite RGB camera, and a proprietary INS system made up of an inertial motion unit (IMU) and Novatel OEM7720 GNSS receiver. The Velodyne Ultra Puck lidar has 32 beams at angle 90$^\circ$ from the nose of the UAS. Most beams are centrally organized in the vertical field of view, increasing data resolution in the center. The beams are non-linearly distributed, resulting in a 40$^\circ$ off axis field of view (from &minus;25$^\circ$ to &minus;15$^\circ$). The beams rotate 360$^\circ$ at 10&nbsp;Hz, providing sea-surface data at 10&nbsp;Hz. Raw lidar returns are put into earth coordinates using the post processed position and orientation solutions. All points closer than 8&nbsp;m and farther than 100&nbsp;m from the lidar were removed as quality control. Full details of the UAS and lidar are found in <span class="cite" data-style="t" data-keys="feddersen_estimating_2024"></span>.</p>
+
+      <figure id="fig-data-plot" class="fig fig-wide">
+        <div class="fig-frame"><img src="assets/figures/david_fig_1444.png" alt="Georectified RGB sea-surface image with coloured lidar sea-surface elevation points overlaid, showing a wave crest near x equals minus 219 metres." loading="lazy" width="2000" height="945"></div>
+        <figcaption><span class="fig-label">Fig. 2.</span> Georectifed sea-surface image in China Rock $(x, y)$ coordinates with overlaid lidar-based sea-surface elevation $\eta(x, y)$ (colored dots) at 09:23:39 19-October-2023 at time $t=30.0$&nbsp;s from start of lidar data collection. The magenta circle in <a href="#fig-map" class="xref">Fig.&nbsp;1</a> is the UAS hover location during the capture of these data. Note the wave crest at $x\approx -219$&nbsp;m.</figcaption>
+      </figure>
+
+      <p>The lidar data were collected during a large swell event near China Rock (<a href="#fig-map" class="xref">Fig.&nbsp;1</a>) on the coast of the Monterey Peninsula, California, USA. The overall cross-shore bathymetric slope is (1:40) and the shoreline consists of small headlands separated by about 250&nbsp;m, with 100&nbsp;m deep embayments. The bathymetry is highly variable at scales $&lt;20$&nbsp;m for depths $h&lt;20$&nbsp;m. A local cross- and alongshore coordinate system $(x,y)$ is defined at China Rock, with $-x$ direction aligned with $280^\circ$N (<a href="#fig-map" class="xref">Fig.&nbsp;1</a>).</p>
+
+      <p>The lidar data were collected during a hover on the 19th of October 2023 at 09:23:39 PST for a total of 701&nbsp;s. Here, only the first 60&nbsp;s are used. The UAS hovered at $(x,y) = (-204, -162)$&nbsp;m at 33-m elevation relative to the sea-surface offshore of a headland location (magenta dot, <a href="#fig-map" class="xref">Fig.&nbsp;1</a>) where large wave breaking occurred. At this location, the mean water depth (including the tide) was $h=5.4$&nbsp;m that increases (decreases) offshore (onshore) with highly variable rough bathymetric features in the region. The winds were light at a few meters per second. During the hover, a relatively large and building groundswell was present. A wave buoy 800&nbsp;m offshore (yellow dot in <a href="#fig-map" class="xref">Fig.&nbsp;1</a>) recorded a sea-swell significant wave height of $H_s = 2.4$&nbsp;m, a peak frequency of $f_p=0.05$&nbsp;Hz, and an energy-weighted mean wave angle of $\bar{\theta} = -3.2^\circ$.</p>
+
+      <p>During the hover, the UAS was oriented such that the lidar scanned in the cross-shore direction (<a href="#fig-data-plot" class="xref">Fig.&nbsp;2</a>). Lidar returns were converted to China Rock $(x,y)$ coordinates. During the hover the UAS remained at a nearly constant position with $x$ and $y$ position standard deviations of $\sigma_x = 0.03$&nbsp;m and $\sigma_y = 0.02$&nbsp;m. The UAS held its orientation consistently during the hover with heading, pitch, and roll standard deviations $&lt;0.23^\circ$.</p>
+
+      <p>At each time $t$ (referenced from the start of the lidar collection), the lidar returns a point cloud $\{(x_i, y_i, z_i, t)\}_{i=1}^{N_t}$ where $x_i$ and $y_i$ are the cross- and alongshore China Rock coordinates, $z_i$ is the sea-surface elevation, $t$ is time, and $N_t$ is the number of lidar samples at time $t$. Note that multiple $x_i$, $y_i$ and $z_i$ correspond to the same time instance $t$ and that $N_t \approx 1.5 \times 10^4$ (but the precise number of samples varies with time). <a href="#fig-data-plot" class="xref">Fig.&nbsp;2</a> shows a lidar point cloud at $t=30.0$&nbsp;s (referenced from the start of lidar data collection) along with an RGB image collected at the same time. The lidar return density is concentrated in the central region below the UAS and spreads out in the $y$-direction due to the nonlinear distribution of lidar beams (<a href="#fig-data-plot" class="xref">Fig.&nbsp;2</a>). For the rest of this paper, we consider only the region $-230 \le x \le -180$&nbsp;m and $-180 \le y \le -145$&nbsp;m, where beam returns are relatively dense. In this region, the lidar captures the elevated sea-surface of the wave crests, consistent with the RGB image. Occasional, isolated and elevated noisy lidar returns, likely sea-spray behind the breaking wave, are also evident (<a href="#fig-data-plot" class="xref">Fig.&nbsp;2</a>).</p>
+
+      <h3 id="sec-siren"><span class="sec-n">b.</span>Modeling Lidar Data by SIREN Neural Networks</h3>
+
+      <p>Neural networks (NN) are functions, parameterized by network parameters $\bth\in \mathbb{R}^{n_{\theta}}$, that map inputs $\mathbf{x} \in \mathbb{R}^{n_x}$ to outputs $\boldsymbol{\Phi}(\mathbf{x};\bth) \in \mathbb{R}^{n_{\Phi}}$. A feedforward neural network (FNN) has the structure of a multilayer perceptron, and is defined by a sequence of functions $\boldsymbol{\phi}_i : \mathbb{R}^{n_{i-1}} \to \mathbb{R}^{n_i}$ such that</p>
+
+      <div class="eq" id="eq-fnn">
+        <div class="eq-body">$$\boldsymbol{\Phi}(\mathbf{x}) = \left(\boldsymbol{\phi}_L(\cdot;\bth) \circ \boldsymbol{\phi}_{L-1}(\cdot;\bth) \circ ... \circ \boldsymbol{\phi}_0(\cdot;\bth) \right) (\mathbf{x}),$$</div>
+        <div class="eq-num">(1)</div>
+      </div>
+
+      <p>where each $\boldsymbol{\phi}_i$ is given by</p>
+
+      <div class="eq" id="eq-nn">
+        <div class="eq-body">$$\boldsymbol{\phi_i} (\mathbf{x};\bth) = \sigma_i\left(\mathbf{W}_i \mathbf{x} +\mathbf{b}_i\right).$$</div>
+        <div class="eq-num">(2)</div>
+      </div>
+
+      <p>Here, $\mathbf{W}_{i}$ is an $n_{i} \times n_{i-1}$ weight matrix and $\mathbf{b}_i$ is a $n_i$-dimensional vector of biases; the weights and biases collectively define the network parameters $\bth$; $\sigma_i(\cdot)$ is the (nonlinear) activation function of the $i$-th layer, which acts element-wise on its input. We use a SIREN (sinusoidal representation network) architecture so that $\sigma_i(\mathbf{\gamma}) = \sin( \mathbf{\gamma})$ for all but the output layer (no output activation). SIRENs have been shown to be efficient, consistent and accurate in regression tasks <span class="cite" data-keys="sitzmann_implicit_2020"></span>.</p>
+
+      <p>A SIREN representation of the sea-surface elevation with network parameters $\bth$ takes in a location and a time, $(x,y,t)$, and outputs an approximate sea-surface elevation, denoted by $\etahat$ for simplicity. We find appropriate network parameters via &ldquo;training,&rdquo; i.e., minimizing the mean squared error (MSE) loss</p>
+
+      <div class="eq" id="eq-mse">
+        <div class="eq-body">$$L(\bth) = \frac{1}{N} \sum_{j=1}^{N}  \left( z_j(x_j,y_j,t_j) - \hat{\eta}(x_j, y_j, t_j| \bth) \right)^2.$$</div>
+        <div class="eq-num">(3)</div>
+      </div>
+
+      <p>using the Adam optimizer <span class="cite" data-keys="kingma_adam_2017"></span> with mini-batching, a popular variant of stochastic gradient descent, along with cosine annealing <span class="cite" data-keys="loshchilov_sgdr_2017"></span> for stepsize control <span class="cite" data-keys="sitzmann_implicit_2020"></span>. As is typical, we normalize the sea-surface elevation data $z_j(x_j,y_j,t_j)$ to have zero mean and unit variance. This transformation is subsequently undone when evaluating the SIREN for sea-surface elevation. Since the loss <a href="#eq-mse" class="xref">(3)</a> is not convex, the initialization of the network parameters defines the local minimizer found by the numerical optimization and we use &ldquo;Xavier initialization,&rdquo; which can be used to initialize FNNs whose activation functions satisfy $f(0)= 0$ and $f'(0) = 1$ <span class="cite" data-keys="glorot_understanding_2010"></span>. <span class="cite" data-style="t" data-keys="sitzmann_implicit_2020"></span> derived a different initialization under the assumption that the input data are uniformly distributed. Lidar data, however, are not uniform, which is why we use Xavier initialization throughout (see also <a href="#sec-disc" class="xref">Section&nbsp;5</a>).</p>
+
+      <p>We implement the optimization in PyTorch and use NVIDIA GeForce GTX 1650 Ti and NVIDIA GeForce GT 1030 graphics cards for computations.</p>
+
+      <p>Using the above procedure, we modeled the first 60&nbsp;s of lidar data (<a href="#sec-exp-over" class="xref">Section&nbsp;2a</a>) with a 4 layer SIREN (300, 500, 500, and 300 neurons &mdash; 551,600 total parameters). During training, we used every other frame of lidar data, effectively using a 5&nbsp;Hz sampling frequency. At roughly 15,000 data points per frame, there are approximately 4.2 million data points over the 60&nbsp;s interval. We split the data into a 80% training set $\etatrain$, used for optimization, and 20% testing set $\etatest$ (randomly sampled). An 80/20 split for training/testing is a common choice <span class="cite" data-keys="goodfellow_deep_2016"></span>, however the lidar observations are inhomogeneously distributed in space, so that testing points concentrate in densely sampled regions, which is a potential limitation of this approach. Training consisted of performing 600 iterations with the Adam optimizer, starting with a learning rate $\alpha = 10^{-3}$ and subsequent cosine annealing. The total training time on our (outdated) hardware is about $30$ mins. The final MSE on the training data is $0.018$&nbsp;m$^2$, corresponding to a root mean square error of about 13&nbsp;cm.</p>
+
+      <p>In computer graphics, SIRENs have been used for compression of video files, where the size of a parameter set defining the SIREN corresponds to the compression of the video <span class="cite" data-prefix="e.g.," data-keys="kwan_enhanced_2026,rho_neural_2022,zhang2021implicitneuralvideocompression"></span>; efficient point cloud compression has also been developed with SIREN models <span class="cite" data-prefix="e.g.," data-keys="zhang_efficient_2025"></span>. For our problem of reconstructing the sea-surface from lidar data, the compression is also quite strong. The 60&nbsp;s of data are a collection of about 4.5 million points, but the SIREN only requires storing 551,600 network parameters (although we did not optimize the number of layers or layer width), implying a $87\%$ data compression.</p>
+    </section>
+
+    <!-- ═══════════════ 3. Results ═══════════════ -->
+    <section id="sec-results" class="block">
+      <h2><span class="sec-n">3.</span>Results</h2>
+
+      <h3 id="sec-errors"><span class="sec-n">a.</span>SIREN Reconstructions of the Sea-Surface</h3>
+
+      <figure id="fig-nn-v-data" class="fig fig-wide">
+        <div class="fig-frame"><img src="assets/figures/nn_v_data.png" alt="Six panels: top row shows lidar observed sea-surface at t equals 30, 31 and 32 seconds; bottom row shows the corresponding SIREN reconstructions on a 0.1 metre mesh." loading="lazy" width="2000" height="1500"></div>
+        <figcaption><span class="fig-label">Fig. 3.</span> (top) Lidar observed sea-surface $\etaobs$ in the China Rock $(x,y)$ coordinates at times (a) $t= 30.0$&nbsp;s, (b) 31.0&nbsp;s, and (c) 32.0&nbsp;s after data collection began. (bottom) The SIREN reconstructed sea-surface $\hat{\eta}(x,y,t|\theta)$ (d) $t=30.0$&nbsp;s, (e) $31.0$&nbsp;s, and (f) $32.0$&nbsp;s. The $(x,y)$ mesh resolution is 0.1&nbsp;m and outermost lidar observed sea-surface is overlaid in red.</figcaption>
+      </figure>
+
+      <p>We present the lidar observed sea-surface $\etaobs$ evolution for two seconds of a strong wave breaking event and compare it to the SIREN reconstruction $\etahat$, which we evaluate on a regular mesh, roughly defined to be within the bounds of the lidar beams (<a href="#fig-nn-v-data" class="xref">Fig.&nbsp;3</a>). At $t=30.0$&nbsp;s, the lidar observes a large ($\etaobs&gt;4$&nbsp;m) wave crest near $x=-210$&nbsp;m with a relatively flat trough with $\etaobs \approx 0.5$&nbsp;m at $x&gt;-205$&nbsp;m (<a href="#fig-nn-v-data" class="xref">Fig.&nbsp;3a</a>). One second later, the wave crest is still large ($\etaobs&gt;4$&nbsp;m) and has coherently propagated onshore nearly 10&nbsp;m (<a href="#fig-nn-v-data" class="xref">Fig.&nbsp;3b</a>). Near $(x,y)=(-200,-168)$&nbsp;m, a secondary hump of elevated $\etaobs \approx 2.5$&nbsp;m is present. At $t=32.0$&nbsp;s, the wave crest has propagated farther in $x$ and appears to have broken with a distinct large splash-up evident near $x=-192$&nbsp;m, a local minimum near $x=-195$&nbsp;m, and a secondary maximum ($\etaobs \approx 3.5$&nbsp;m) near $x=-198$&nbsp;m (<a href="#fig-nn-v-data" class="xref">Fig.&nbsp;3b</a>). High wavenumber variability is evident in the lidar data, particularly at $t=32.0$&nbsp;s. Isolated artifacts in the lidar data also are evident, likely related to sea spray. The lidar data are very rich, and able to observe wave phenomena that in situ pressure sensors cannot. However, as discussed above, to use the lidar data for analysis, it must be gridded in some form.</p>
+
+      <p>The SIREN reconstruction $\etahat$ does an excellent job of representing the major features of the propagating and breaking wave within the bounds of the lidar beams (<a href="#fig-nn-v-data" class="xref">Figs.&nbsp;3d&ndash;f</a>). At $t=30.0$&nbsp;s, $\etahat$ reproduces the key features of the lidar observations (<a href="#fig-nn-v-data" class="xref">Fig.&nbsp;3d</a>), with some smoothing and removal of artifacts. At $t=31.0$&nbsp;s (<a href="#fig-nn-v-data" class="xref">Fig.&nbsp;3e</a>), $\etahat$ has the leading secondary hump of elevated sea-surface consistent with lidar observations. At $t=32.0$&nbsp;s (<a href="#fig-nn-v-data" class="xref">Fig.&nbsp;3f</a>), $\etahat$ represents well the breakup of the wave into the two maxima seen in the lidar. Thus, the SIREN reconstruction is able to essentially reject outlier points, to lightly smooth $\etaobs$, and, perhaps most importantly, the SIREN reconstruction can be evaluated at any $(x,y,t)$, not just at the times and location where data were collected.</p>
+
+      <figure id="fig-error-hist" class="fig fig-wide">
+        <div class="fig-frame"><img src="assets/figures/error_hist.png" alt="Three normalized histograms of the testing error with fitted Gaussian curves at t equals 30, 31 and 32 seconds." loading="lazy" width="3000" height="1250"></div>
+        <figcaption><span class="fig-label">Fig. 4.</span> Normalized histograms (cyan) of error $\varepsilon = \etatest - \heta$ from testing set of lidar returns at (a) $t=30.0$&nbsp;s, (b) $t=31.0$&nbsp;s, and (c) $t=32.0$&nbsp;s. In each panel, a Gaussian distribution is shown (green dashed) with the given error mean ($\mu_{\varepsilon}$) and standard deviation ($\sigma_{\varepsilon}$).</figcaption>
+      </figure>
+
+      <p>Recall that the SIREN reconstruction, $\etahat$, is trained to minimize the MSE with the training data, but we can also assess its accuracy on the testing data $\etatest$ (because $\etahat$ is a continuous function for any $(x,y,t)$) We calculate the error $\varepsilon = \etatest - \heta$ between the SIREN reconstruction and the testing data $\etatest$ at times $t = 30.0$&nbsp;s, 31.0&nbsp;s, and $32.0$&nbsp;s and estimate the error probability density function (pdf), the mean $\mu_\varepsilon$, and standard deviation $\sigma_\varepsilon$ (<a href="#fig-error-hist" class="xref">Fig.&nbsp;4</a>). The mean residual $\mu_\varepsilon$ varies from 0.00&ndash;0.01&nbsp;m, depending on the time. This indicates that $\etahat$ has no to very little bias, relative to the observations. The standard deviation of error $\sigma_\varepsilon$ varies from 0.13&ndash;0.19&nbsp;m, which is comparable to to the RMS error in the <em>training</em> data (see <a href="#sec-siren" class="xref">Section&nbsp;2b</a>). The lidar instrumental errors are spatially variable and its standard deviation was estimated to be $0.06$&nbsp;m directly below the hovering UAS <span class="cite" data-keys="feddersen_estimating_2024"></span>, serving as a lower bound on the expected instrument error. Thus, the RMS during training, as well as $\sigma_\varepsilon$ during testing, is $2$&ndash;$3\times$ the estimated lower bound of instrumental error, suggesting $\etahat$ largely follows $\etaobs$ accounting for the noise in $\etaobs$.</p>
+
+      <p>The pdf of $\varepsilon$ is partially consistent with a Gaussian distribution with $\mu_\varepsilon$ and $\sigma_\varepsilon$ at each time step (<a href="#fig-error-hist" class="xref">Fig.&nbsp;4</a>). The pdf of $\varepsilon$ is also largely symmetric about the near-zero mean, indicating similar quality of representation for positive or negative errors. At $t=30.0$&nbsp;s and $t=31.0$&nbsp;s, the pdf of $\varepsilon$ is consistent with a Gaussian out to $1.5\sigma_\varepsilon$, however with far more outliers than a Gaussian distribution. At $t=32.0$&nbsp;s, the pdf of $\varepsilon$ is narrower than a Gaussian with even more outliers. This is likely due to the splash-up process of the breaking wave (<a href="#fig-nn-v-data" class="xref">Fig.&nbsp;3c</a>) being essentially filtered by the SIREN reconstruction.</p>
+
+      <figure id="fig-error-density" class="fig fig-wide">
+        <div class="fig-frame"><img src="assets/figures/ErrorDensity.png" alt="Left: 2D histogram of lidar return density with high-density magenta point and low-density red point marked. Right: mean absolute error versus data density with quartile bars." loading="lazy" width="2500" height="1250"></div>
+        <figcaption><span class="fig-label">Fig. 5.</span> (a) 2D histogram of lidar returns as a function of cross- ($x$) and alongshore ($y$) coordinates at $t = 30.0$&nbsp;s, binned at a 1&nbsp;m by 1&nbsp;m resolution. Regions of high data density and low data density are indicated as pink and red points surrounded by a circle of radius 1.5&nbsp;m, respectively. (b) Mean (black circle) and 25%&ndash;75% quartile range (vertical bar) of absolute error $|\varepsilon|$, at $t=30.0$&nbsp;s versus the local data density from (a). The bin-spacing is such that the number of occurrences in each bin is relatively constant.</figcaption>
+      </figure>
+
+      <p>Lidar data density is variable in the cross-shore $(x)$ and alongshore $(y)$ directions with the densest region below the central vertical field of the UAS (<a href="#fig-data-plot" class="xref">Fig.&nbsp;2</a>). To estimate the density of lidar observations, we binned all data points at a $1\times1$&nbsp;m$^2$ resolution. The resulting data density varies from 1 to 50 points per bin (<a href="#fig-error-density" class="xref">Fig.&nbsp;5a</a>), where data density is concentrated in the cross-shore direction at the $y$ location of the UAS. By this definition, any bin without lidar observations has zero data density, and for any bin with lidar observations the density is $\geq1$. The off-center beams typically have between 1-10 data points per bin, and the densest regions under the UAS have $&gt;50$ points per bin. From this binning procedure, the density of captured lidar is clearly non-uniform which is an important feature for using the Xavier initialization, which is further discussed in <a href="#sec-disc" class="xref">Section&nbsp;5</a>.</p>
+
+      <p>At data density $\le 35$, the mean $|\varepsilon| &lt; 0.1$&nbsp;m and the 75% quartile is $&lt;0.2$&nbsp;m (<a href="#fig-error-density" class="xref">Fig.&nbsp;5a</a>). Even for the sparsest data density, the $\etahat$ error is quite low with a mean $|\varepsilon|$ of 0.08&nbsp;m. This suggests that, in regions of low to moderate data density, the $\etahat$ errors are relatively low and quasi consistent with the expected lidar data error. However, in regions of high data density ($&gt;35$), $|\varepsilon|$ increases both means and the 25%&ndash;75% quartile ranges (<a href="#fig-error-density" class="xref">Fig.&nbsp;5b</a>). For data density $\geq 55$, the mean $|\varepsilon|$ is three times that of the lower data density. This appears at first counter-intuitive. However, the regions of the very highest data density is relatively small (near $x=-211$&nbsp;m in <a href="#fig-error-density" class="xref">Fig.&nbsp;5a</a>) and includes that of a steep, rapidly varying, and $\approx 4$&nbsp;m wave crest (<a href="#fig-nn-v-data" class="xref">Fig.&nbsp;3a,d</a>). This region is also associated with more sea-spray. As the SIREN $\etahat$ serves to filter high wavenumber variability, it will neglect the very high wavenumber variability of sea-spray and somewhat filter the spatial variability of the wave crest and overturning wave, particularly as seen at $t=32.0$&nbsp;s (<a href="#fig-nn-v-data" class="xref">Fig.&nbsp;3c,f</a>). Hence, the higher mean error $|\varepsilon|$ in the very densest regions likely is an artifact of $\etaobs$ having high wavenumber variability there. As most of the reconstructed region is relatively flat with low wavenumber variability (<a href="#fig-nn-v-data" class="xref">Fig.&nbsp;3</a>), and lower data density regions are evenly distributed across the area of study, the mean error $|\varepsilon|$ is generally lower than in the very densest region.</p>
+
+      <h3 id="sec-residuals"><span class="sec-n">b.</span>Reproducibility of SIRENs</h3>
+
+      <figure id="fig-analysis" class="fig fig-wide">
+        <div class="fig-frame"><img src="assets/figures/DenseReliability.png" alt="Panel a: map of residuals between two independently trained SIRENs at t equals 30 seconds. Panels b and c: time series of the two SIRENs at a dense and a sparse data location with lidar returns overlaid." loading="lazy" width="3750" height="1500"></div>
+        <figcaption><span class="fig-label">Fig. 6.</span> (a) The residuals $\xi(x,y)$ <a href="#eq-xi" class="xref">(4)</a> between two SIRENs as a function of $x$ and $y$ at $t=30.0$&nbsp;s on a fine $(x,y)$ mesh with a grid-size of 0.1&nbsp;m between the two SIREN representations ($\heta_1$ and $\heta_2$), trained on the same data. (b,c) $\heta_1$ (cyan) and $\heta_2$ (green) versus time for (c) region of high (magenta dot in <a href="#fig-error-density" class="xref">Fig.&nbsp;5</a>) and low (red dot <a href="#fig-error-density" class="xref">Fig.&nbsp;5</a>) data density at time resolution of 0.1&nbsp;s. Black dots in (b,c) represent lidar returns in the 1.5&nbsp;m radius circle associated with each dot.</figcaption>
+      </figure>
+
+      <p>During training, we use several random processes &mdash; splitting the data into training and testing sets, initializing the NN with Xavier initialization, and training using Adam optimization, which is a stochastic method. To test the reproducibility of our overall approach, we initialize two networks at random (using the Xavier method) and then train both networks on the same training data and using the same number of iterations for optimization. The result is two sets of optimized network parameters $\bth_1$ and $\bth_2$, and we denote the corresponding SIRENs by $\hat{\eta}(x,y,t| \bth_1)$ and $\hat{\eta}(x,y,t| \bth_2)$. The residual between the two models $\xi$ is defined as</p>
+
+      <div class="eq" id="eq-xi">
+        <div class="eq-body">$$\xi(x,y) = \hat{\eta}(x,y,t=30\text{s}| \bth_1) - \hat{\eta}(x,y,t=30\text{s}| \bth_2)$$</div>
+        <div class="eq-num">(4)</div>
+      </div>
+
+      <p>at $t=30.0$&nbsp;s (<a href="#fig-analysis" class="xref">Fig.&nbsp;6a</a>). The residuals have a near-zero mean of $\mu_\xi = 0.00$&nbsp;m, and the standard deviation $\sigma_\xi = 0.23$&nbsp;m is $3-4 \times$ the estimated lower bound of the instrument error, indicating that $\hat{\eta}(x,y,t| \bth_1)$ and $\hat{\eta}(x,y,t| \bth_1)$ reproduce similar sea-surface elevations on the grid (not just near the data points). The absolute residuals, $|\xi(x,y)|$, increase at $x = -210$, which at $t=30.0$&nbsp;s corresponds to a wave crest of $4$&nbsp;m, indicating the increase of residuals is likely caused by the variability in $\etaobs$ at $x =-210$.</p>
+
+      <p>Since $\heta_1$ and $\heta_2$ are functions of time, we evaluated them at a point in the dense data region, $(x_A,y_A)$ (magenta point in <a href="#fig-error-density" class="xref">Fig.&nbsp;5a</a>), and at a point in the sparse data region, $(x_B, y_B)$ (red point in <a href="#fig-error-density" class="xref">Fig.&nbsp;5a</a>), from $t = 25.0$&nbsp;s to $35.0$&nbsp;s (<a href="#fig-analysis" class="xref">Fig.&nbsp;6b,c</a>). The residuals are defined by,</p>
+
+      <div class="eq" id="eq-xiab">
+        <div class="eq-body">$$\begin{aligned} \xi_A(t) &amp;= \heta(x_A, y_A, t \vert \bth_1) - \heta(x_A, y_A, t\vert \bth_2)\\ \xi_B(t) &amp;= \heta(x_B, y_B, t\vert \bth_1) - \heta(x_B, y_B, t\vert \bth_2) \end{aligned}$$</div>
+        <div class="eq-num">(5)<br>(6)</div>
+      </div>
+
+      <p>and we compute the means and standard deviations $\mu_A = 0.05$&nbsp;m, $\mu_B = 0.01$&nbsp;m, and $\sigma_A = 0.09$&nbsp;m and $\sigma_B = 0.17$&nbsp;m. Both $\mu_A$ and $\mu_B$ are close to zero, suggesting that both SIRENs generate similar sea-surfaces in both the dense and sparse regions. The sparse region has a larger standard deviation in the residuals than the dense region, indicating that both SIRENs can generate variable sea-surfaces in regions where the data density is low. The reason is that the training imposes less of a penalty in the data sparse regions.</p>
+
+      <figure id="fig-res-density" class="fig fig-narrow">
+        <div class="fig-frame"><img src="assets/figures/ResidualDensity.png" alt="Absolute residual between two SIRENs versus binned data density, with mean markers and 25 to 75 percent quartile bars." loading="lazy" width="1500" height="1000"></div>
+        <figcaption><span class="fig-label">Fig. 7.</span> Absolute residuals $|\xi(x,y)|$ between two SIRENs at $t= 30.0$&nbsp;s versus data density (per $1\times 1~\mathrm{m^2}$) evaluated on a $(x,y)$ mesh resolution of 0.1&nbsp;m. The black circle represents the mean and the vertical bars represent the 25%-75% quartiles. The bin spacing increases geometrically and was set such that the $|\xi(x,y)|$ number in each bin was relatively constant.</figcaption>
+      </figure>
+
+      <p>The residuals $\xi(x,y)$ are computed on a mesh over the study region. Within the region, the data density is variable with regions of no data to regions of up to 50 points per $1\times 1~\mathrm{m}^2$. We evaluate the dependence of the residual $|\xi(x,y)|$ mean and 25%-75% quartiles on the local data density (<a href="#fig-res-density" class="xref">Fig.&nbsp;7</a>). In regions of sparse data density ($&lt;10$), the mean $|\xi(x,y)| \approx 0.13$&nbsp;m with upper 75% quartile of almost up to 0.40&nbsp;m. Thus, in low density regions, the difference between SIREN reconstructions becomes relatively large. In contrast, in regions of high data density ($&gt;20$), the mean $|\xi(x,y)| \approx 0.08$&nbsp;m, with 75% quartile up to 0.16&nbsp;m. Thus, high data density regions have SIREN reconstructions that are similar to each other. The relationship between $|\xi(x,y)|$ and data density is opposite to the relationship between error $|\varepsilon|$ and data density (<a href="#fig-error-density" class="xref">Fig.&nbsp;5</a>). The different trends here are likely caused by evaluating the residual between two networks, $|\xi(x,y)|$, in regions with no data (zero data density): Without constraint from data, SIREN reconstructions depend largely on the initialization and, therefore, are somewhat random. This should be no surprise since evaluating a SIREN model outside of the training data amounts to extrapolation, which is notoriously difficult to control or do well. Over all ranges of data density, however, the mean $|\xi(x,y)|$ are all $&lt; 0.20$&nbsp;m, which is $\times 4$ the estimated instrument lower bound error of $\sigma = 0.06$&nbsp;m, suggesting that the training procedure overall reproduces similar sea-surface representations within the study region.</p>
+    </section>
+
+    <!-- ═══════════════ 4. Wave analysis ═══════════════ -->
+    <section id="sec-wave-analysis" class="block">
+      <h2><span class="sec-n">4.</span>SIRENs for wave analysis</h2>
+
+      <p>We showcase the use of SIRENs for wave analysis via space-time analysis of the sea-surface and by computing spatial and temporal derivatives.</p>
+
+      <h3 id="sec-hov"><span class="sec-n">a.</span>Space-time analysis of the sea-surface</h3>
+
+      <figure id="fig-hovmoller" class="fig fig-wide">
+        <div class="fig-frame"><img src="assets/figures/hovemoller.png" alt="Hovmöller diagram of the SIREN reconstructed sea-surface as a function of cross-shore distance and time at fixed alongshore position, showing diagonal bands of elevated crests." loading="lazy" width="2500" height="1250"></div>
+        <figcaption><span class="fig-label">Fig. 8.</span> The SIREN reconstructed seas surface $\etahat$ as a function of $x$ and $t$ at fixed $y_0 = -162.5$&nbsp;m. The $(x,t)$ mesh resolution is $0.1$&nbsp;m and $0.1$&nbsp;s.</figcaption>
+      </figure>
+
+      <p>A classic tool for wave analysis is a Hovm&ouml;ller diagram that illustrates the spatiotemporal variability of a wave field. <a href="#fig-hovmoller" class="xref">Fig.&nbsp;8</a> shows a SIREN generated Hovm&ouml;ller diagram for the full 60&nbsp;s time interval and the 80&nbsp;m cross-shore range in the center of the alongshore region $y_o=-162.5$&nbsp;m. A clear feature are three large wave crests, represented by diagonal bands of elevated ($&gt;4$&nbsp;m) $\heta$, propagating cross-shore. These crests are separated by $\approx 20$&nbsp;s, which is consistent with the peak period of the wave buoy. The 3 bands have similar $x$-$t$ slope that is uniform in the cross-shore direction, although the bathymetry does get shallower. The speed of the wave crest, $c = \Delta x/\Delta t$ is estimated from a simple fit of the second wave's crest resulting in $c = 8.75~\mps$. This is consistent with a nonlinear wave phase speed of $c_p = (g (h+ H/2))^{1/2} = 8.5~\mps$ using wave height $H=4$&nbsp;m and mean water depth $5.4$&nbsp;m under the UAS. Thus, the SIREN represents wave propagation and variability well.</p>
+
+      <p>The three large wave crests have maximum elevations that increase or decrease with wave propagation indicating shoaling and wave breaking (<a href="#fig-hovmoller" class="xref">Fig.&nbsp;8</a>). For example consider the wave crest between $t=50$&nbsp;s and $t=60$&nbsp;s, which reaches a maximum near $t=55$&nbsp;s and decreases thereafter with a secondary maximum at $t=59$&nbsp;s near $x=-160$&nbsp;m. Two smaller, onshore propagating waves with weaker crest elevations are also evident, entering the domain between $t=32$ and $t=43$&nbsp;s. These waves propagate more slowly such that the weak wave crest at $(x,t)=(-240~\mathrm{m}, 43~\mathrm{s})$ is close to being captured by the larger crest behind it at $t=60$&nbsp;s. Additionally, weak offshore propagating $(x,t)$ bands can be seen behind the first elevated crest near $(x,t) = (-215~\mathrm{m}, 12~\mathrm{s})$ or at $(x,t) = (-185~\mathrm{m}, 14~\mathrm{s})$. These features may be reflected waves.</p>
+
+      <h3 id="sec-deriv"><span class="sec-n">b.</span>Spatial and time derivatives of SIREN reconstruction</h3>
+
+      <figure id="fig-derivative" class="fig fig-narrow">
+        <div class="fig-frame"><img src="assets/figures/derivatives.png" alt="Four panels showing the SIREN sea-surface, gradient magnitude, Laplacian, and time derivative around the wave crest at t equals 30 seconds." loading="lazy" width="1500" height="1500"></div>
+        <figcaption><span class="fig-label">Fig. 9.</span> SIREN reconstructed sea-surface and its derivatives at $t=30.0$&nbsp;s as a function of the cross-shore ($x$) and alongshore ($y$) around the wave crest: (a) reconstructed sea-surface $\heta$, (b) magnitude of sea-surface gradient $\gradeta = ( (\partial_x \heta)^2 + (\partial_y \heta)^2)^{1/2}$, (c) sea-surface Laplacian $\lapeta = \partial_x^2 \heta + \partial_y^2 \heta$, and (d) time derivative of sea-surface, $\partial \heta/\partial t$. The $(x,y)$ mesh resolution is 0.1&nbsp;m.</figcaption>
+      </figure>
+
+      <p>Many types of wave analyses, such as directional or nonlinear dispersion analyses, require estimation of spatial or temporal derivatives of the sea-surface. Differentiation of NNs is well-understood and automatic differentiation tools allow for efficiently evaluating derivatives of SIREN sea-surface representations at arbitrary locations in space and time <span class="cite" data-keys="baydin_automatic_2018"></span>. The SIREN network architecture is particularly stable under differentiation <span class="cite" data-keys="sitzmann_implicit_2020"></span>. We now examine various spatial and temporal derivatives of SIREN sea-surface reconstructions $\etahat$ at $t=30.0$&nbsp;s concentrated at the wave crest (<a href="#fig-derivative" class="xref">Fig.&nbsp;9</a>) to illustrate the differentiability of SIRENs.</p>
+
+      <p>As also seen in <a href="#fig-nn-v-data" class="xref">Fig.&nbsp;3e</a>, the SIREN sea-surface $\etahat$ is relatively flat in front of the wave crest ($x&gt;-205$&nbsp;m), has a steep front-face to a maximum ($\heta &gt; 4$&nbsp;m), and a back-face with a shallower slope (<a href="#fig-derivative" class="xref">Fig.&nbsp;9a</a>). The wave crest itself has some alongshore variation. We estimate $\gradeta = ( (\partial_x \heta)^2 + (\partial_y \heta)^2)^{1/2}$ using the SIREN $x$ and $y$ derivatives (<a href="#fig-derivative" class="xref">Fig.&nbsp;9b</a>). In front of the wave crest, $\gradeta$ is small and near $\approx 0.1$. On the front face, $\gradeta$ has a continuous but bending maximum that varies from 0.75 to 1.9, suggesting the wave is near overturning. At the wave crest maximum, $\gradeta$ has a continuous and bending minimum near zero. On the back face of the wave, $\gradeta$ is relatively constant in $x$ near a value of $\approx 0.5$ before flattening out at $x&lt;-220$&nbsp;m. Most of the contribution to $\gradeta$ comes from $\partial \heta/\partial x$.</p>
+
+      <p>We can also examine the horizontal Laplacian $\lapeta = \partial_x^2 \heta + \partial_y^2$ (<a href="#fig-derivative" class="xref">Fig.&nbsp;9c</a>), which is related to the curvature of $\heta$. Two strong bands of positive and negative $\lapeta$, both with extremal $|\lapeta| \approx 1.95~\mathrm{m}^{-1}$ are seen on the front face of the wave. Farther in front of the wave and on the back-face of the wave, $\lapeta$ is weak and near zero indicating a quasi-planar water surface.</p>
+
+      <p>We can also compute temporal derivatives, e.g., $\detadt$ (<a href="#fig-derivative" class="xref">Fig.&nbsp;9</a>). On the front face of the wave, a continuous band of $\detadt$ is positive and large, up to $18~\mps$. At the wave-crest, $\detadt = 0$, as expected, and also at the same locations where $\gradeta \approx 0$. On the back face of the wave, $\detadt$ is much weaker at $\approx -5~\mps$ and more spatially uniform, also consistent with the $\gradeta$. The consistent features between $\gradeta$ and $\detadt$ are expected for a propagating wave. In fact, for a propagating wave whose shape does not change, $\detadt = c_p \partial \heta/\partial x$. Using $c_p \approx 8~\mps$ and maximum $\gradeta = 1.9$ gives an estimate of $\detadt \approx 15.8~\mps$, close to the maximum $\detadt = 18~\mps$. The differences are due to the wave changing shape and because alongshore wave speeds $c_p$ are neglected.</p>
+    </section>
+
+    <!-- ═══════════════ 5. Discussion ═══════════════ -->
+    <section id="sec-disc" class="block">
+      <h2><span class="sec-n">5.</span>Discussion and Summary</h2>
+
+      <h3 id="sec-merits"><span class="sec-n">a.</span>Relative merits and limitations of the SIREN representation of lidar data</h3>
+
+      <p>SIREN representations of 2D lidar data have advantages and disadvantages relative to previous nearshore lidar data analysis methodologies. Most nearshore lidar observations were single beam in the cross-shore direction with data de-spiked and then binned or interpolated to a fixed grid with resolution $\Delta x = 0.1$&nbsp;m <span class="cite" data-prefix="e.g.," data-keys="brodie_lidar_2015,MARTINS2017,Fiedler2021JTECH"></span>. Conceptually this approach is simple and straightforward, and has been used, for example, to estimate wave spectra at various cross-shore locations. <span class="cite" data-prefix="e.g.," data-keys="fiedler_observations_2015,Martins2020JGR"></span>. At a $\Delta x = 0.1$&nbsp;m grid resolution, an extent of 70&nbsp;m and assuming a 5&nbsp;Hz sampling frequency over 60&nbsp;s, the single beam gridding uses $2.1\times 10^5$ entries. The approximately $5.5 \times 10^5$ parameters of our spatially 2D SIREN reconstructed $\heta$ is roughly $2.6$ the size of the single beam gridding, while reconstructing a 35&nbsp;m alongshore extent. This indicates that the SIREN representation is quite compact even given its 2D nature while still containing significant small scale features (<a href="#fig-nn-v-data" class="xref">Fig.&nbsp;3</a>).</p>
+
+      <p>SIREN networks, however are trained on lidar data sets via optimization, which is more complex and takes longer than simple binning/interpolations methods used previously. Here, we have only trained on 60&nbsp;s of data, but computing meaningful waves statistics requires approximating at least 10&nbsp;min of spatiotemporal lidar data. Computing a SIREN representation of 10&nbsp;min of lidar data can be achieved by training 10 SIRENs on 10 sequential 60&nbsp;s windows of lidar data. Training these 10 SIREN sequentially takes $10\times 30$&nbsp;min = 5&nbsp;hrs, but the wall-clock time can be reduced if multiple GPUs are available to train the SIRENs in parallel. However, training 10 SIRENs over 10 time windows of 60s may produce discontinues.</p>
+
+      <p>Training a single SIREN to approximate 10&nbsp;min of lidar data guarantees continuous sea-surface representations in space and time, but increases compute requirements. Current GPUs easily accomodate 10&nbsp;min of lidar data (sampled at 5&nbsp;Hz) with sufficient memory for mini-batching during the optimization. More training data generally requires deeper and wider networks (more layers, with more neurons in each layer), but it is difficult to anticipate how much larger the network needs to be to accurately capture 10&nbsp;min of lidar data. Some empirical results show that model size (number of total network parameters) grows sub-linearly with data size <span class="cite" data-keys="hestness2017deeplearningscalingpredictable"></span>. Assuming a fixed mini-batch size, the total training time can be estimated as follows:</p>
+
+      <div class="eq eq-unnumbered">
+        <div class="eq-body">$$\text{Training Time for 10 min} \approx \text{Baseline Training Time} \times \text{Data Multiplier} \times \text{Parameter Multiplier},$$</div>
+      </div>
+
+      <p>where the baseline training time for 60&nbsp;s of lidar data is 30&nbsp;min, the data multiplier is 10 ($10\times$ more data, going from 60&nbsp;s to 10&nbsp;min) and where the Parameter Multiplier accounts for the increase in model complexity. Assuming a $5-10\times$ increase in network complexity then increases the training time to $\sim 1-2$ days. A training time of 1-2&nbsp;days is a significant step-up in computational cost compared to gridded approaches, but the spatial and temporal continuity, along with the differentiability of the SIREN representation may be worth this computational investment.</p>
+
+      <p>A distinct advantage of the SIREN representation $\heta$ is that it is a continuous function that can be evaluated, along with derivatives, at any location and at any time <span class="cite" data-keys="sitzmann_implicit_2020"></span>. Spatial derivatives can also be estimated from discrete, gridded products, however, finite difference errors may not be insignificant at steep slopes. Spatial sea-surface derivatives were accurately estimated at a single location by fitting a plane or 2D parabola to lidar data within a $O(1)$&nbsp;m radius &ldquo;instrument&rdquo; region <span class="cite" data-keys="feddersen_estimating_2024"></span>. Although it could be done over multiple &ldquo;instrument&rdquo; regions, such analysis would be independent. In contrast, the SIREN representation $\heta$ is naturally grid-free and allows straightforward estimation of spatial and temporal derivatives.</p>
+
+      <p>Finally, we note that the lidar data we use here have a high point cloud density because the waves were often breaking and the water was foamy, leading to high returns. Farther offshore, the water is clearer and not foamy, and point cloud density may be lower <span class="cite" data-keys="feddersen_estimating_2024"></span>. How sea-surface representations via SIRENs would work in regions of lower point cloud density will be a topic for future research.</p>
+
+      <h3 id="sec-xav-sir"><span class="sec-n">b.</span>Xavier vs SIREN initialization</h3>
+
+      <figure id="fig-init" class="fig fig-wide">
+        <div class="fig-frame"><img src="assets/figures/SirenInit.png" alt="Panel a: SIREN sea-surface at t equals 32 seconds trained with the native SIREN initialization, showing spurious ridges outside the data region. Panel b: absolute residuals versus data density for the native initialization." loading="lazy" width="3250" height="1250"></div>
+        <figcaption><span class="fig-label">Fig. 10.</span> (a) A trained SIREN sea-surface at $t=32.0$&nbsp;s which was initialized with the native SIREN initialization, assuming uniformly distributed data. The outermost lidar samples at $t = 32.0$&nbsp;s are plotted in red. (b) Absolute residuals $|\xi(x,y)|$ between two SIREN sea-surface representations at $t=30.0$&nbsp;s which are initialized with the native SIREN initialization plotted in the same manner as <a href="#fig-res-density" class="xref">Fig.&nbsp;7</a>.</figcaption>
+      </figure>
+
+      <p>Training a neural network amounts to performing a non-convex optimization over a high-dimensional space with several local minima. Where we start the optimization, i.e., how we initialize the weights of the network, is therefore an important aspect of the overall training process. There are several &ldquo;standard&rdquo; initialization schemes, including Xavier <span class="cite" data-keys="glorot_understanding_2010"></span> and He <span class="cite" data-keys="HeInit"></span> initialization. Which initialization to use depends on the activation function and the overall network architecture.</p>
+
+      <p><span class="cite" data-style="t" data-keys="sitzmann_implicit_2020"></span> derived a new initialization for SIRENs under the assumption that the input data, after normalization, are uniformly distributed on a unit hyper-cube. The assumption of uniformly distributed input data is often valid in image or video processing, but this assumption is not valid for the lidar data which is non-uniformly distributed in space. Each beam samples at a fixed angular rate which results in varying along-beam distribution. Furthermore, the 32 beams are not evenly distributed in space (<a href="#fig-data-plot" class="xref">Fig.&nbsp;2</a>).</p>
+
+      <p>The fact that the lidar data are not uniformly distributed suggests that the initialization of <span class="cite" data-style="t" data-keys="sitzmann_implicit_2020"></span> may not be applicable for our purposes. Indeed, using the &ldquo;native&rdquo; SIREN initialization on the lidar data results in networks that perform poorly. For example, we trained a SIREN with the native initialization (<a href="#fig-init" class="xref">Fig.&nbsp;10a</a>). At $t=32.0$&nbsp;s, the network generates a wave with a single wave crest, the sea-surface drops to zero outside of the spatial region where data were available (<a href="#fig-init" class="xref">Fig.&nbsp;10a</a>) with elevated and cross-shore aligned $\heta$ ridges at $-155&lt;y&lt;-150$&nbsp;m, that are not evident in the lidar data or in the SIREN representation we obtained using Xavier initialization (compare <a href="#fig-nn-v-data" class="xref">Fig.&nbsp;3c,f</a> with <a href="#fig-init" class="xref">Fig.&nbsp;10a</a>).</p>
+
+      <p>The two different initializations report nearly identical testing errors, with the native initialization model having an MSE of 0.021&nbsp;m$^2$ and the Xavier initialization model having an MSE of $0.020$&nbsp;m$^2$. Since the MSE is a data weighted metric it fails to capture how the two initializations vary in sparse regions of data. With the native initialization, the reproducibility statistics were worse than with Xavier initialization (compare <a href="#fig-res-density" class="xref">Fig.&nbsp;7</a> with <a href="#fig-init" class="xref">Fig.&nbsp;10b</a>). In regions of high data density, the reproducibility statistics ($|\xi|$) were similar for both initialization schemes. However, in regions of low data density ($\le 2$), the native SIREN initialization had $|\xi|$ that was 50% or more larger than that for Xavier initialization. In summary, the native SIREN initialization results in reduced reproducibility along with poor reconstruction in regions of few/no data.</p>
+
+      <p>The reason for the improved performance with Xavier initialization (vs. the SIREN-native initialization) is that the Xavier method requires fewer assumptions. In particular, there is no implicit or explicit assumption about the distribution of the input data (other than that it should have mean zero and finite variance). The Xavier method for initializing the network parameters may be suboptimal, but for our purposes with non-uniformly distributed inputs, Xavier initialization yielded more accurate SIRENs than using the initialization proposed by <span class="cite" data-style="t" data-keys="sitzmann_implicit_2020"></span>.</p>
+
+      <h3 id="sec-summary"><span class="sec-n">c.</span>Summary</h3>
+
+      <p>We developed and tested a method for approximating time sequenced lidar point clouds using a specific neural network architecture (SIREN) to create a continuous and differentiable, but grid-free, representation of the sea-surface. The point clouds were sampled by equipping a UAS with a multi-beam lidar sensor which hovered above the surf zone of breaking waves in near-shore rocky conditions off the coast of China Rock, Monterey. The lidar sensor projects multiple scans perpendicular to the sea-surface, effectively resolving time stamped point clouds of the sea-surface. A SIREN was then trained over 60&nbsp;s of the lidar using the MSE loss, Adam optimization, and the Xavier initialization. The result is a reconstructed sea-surface that can be queried at any location and at any time and whose derivatives are easy to compute.</p>
+
+      <p>The SIREN successfully captures low to medium wave number variability while filtering out the highest wave number variability in the sea-surface. The errors of the SIREN reconstructed sea-surface are comparable to the instrument errors of the lidar, and local data density had a minimal effect on the errors found in the reconstruction. Training multiple SIRENs over the same data produced sea-surface reconstructions which had residuals comparable to instrument error. We found that in low density regions the residuals tended to be larger than in data dense regions. We then evaluated the SIREN at a space-time slice where we estimated wave velocities consistent with the non-linear wave dispersion. To further highlight the potential of SIRENs for directional wave analysis, we computed spatial and temporal derivatives of the SIREN reconstructed sea-surface. This method in principle could also be applied to stereo-camera generated point clouds.</p>
+    </section>
+
+    <!-- ═══════════════ Acknowledgments ═══════════════ -->
+    <section id="acknowledgments" class="block">
+      <h2>Acknowledgments</h2>
+      <p>This paper is part of the ROcky Shore: eXperiment and SImulations (ROXSI) project, funded by the Office of Naval Research through grants N000142112786 supporting FF. MM is supported by the US Office of Naval Research (ONR) Grant N00014&#8208;21&#8208;1&#8208;2309. The Monterey NOAA Sanctuary, CA Fish and Wildlife, and Pebble Beach provided environmental permission for the experiment with permitting support provided by Chris Miller from Naval Postgraduate School. We thank the SIO field crew for their invaluable support: Brian Woodward, Kent Smith, Rob Grenzeback, Lucian Parry, Shane Finnerty, Carson Black. We appreciate the valuable feedback from Jamie H. MacMahan. Data and processing code will be made available on zenodo.org upon revision.</p>
+    </section>
+
+    <!-- ═══════════════ References ═══════════════ -->
+    <section id="references" class="block">
+      <h2>References</h2>
+      <ol id="reflist" class="reflist"></ol>
+    </section>
+
+    <footer class="paper-footer">
+      <p>Culver, D. R., F. Feddersen, and M. Morzfeld: <em>Continuous and Differentiable Neural Network Representations of the Surfzone Sea-Surface from Lidar Point Clouds.</em> Scripps Institution of Oceanography, University of California, San Diego.</p>
+    </footer>
+
+  </main>
+</div>
+
+<!-- lightbox -->
+<div id="lightbox" hidden>
+  <button id="lightbox-close" type="button" aria-label="Close figure viewer">&times;</button>
+  <figure id="lightbox-fig">
+    <img id="lightbox-img" src="" alt="">
+    <figcaption id="lightbox-cap"></figcaption>
+  </figure>
+</div>
+
+<!-- citation tooltip -->
+<div id="citepop" hidden></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="js/references.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>

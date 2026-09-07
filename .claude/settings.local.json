@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(Get-ChildItem -Path \"c:\\\\Users\\\\dculv\\\\OneDrive\\\\Documents\\\\Scripps_Research\\\\NN_and_Waves\\\\paper\\\\website\" -Recurse -File | ForEach-Object { \"{0}  {1}\" -f $_.FullName.Substring\\(70\\), $_.Length })",
+      "PowerShell(foreach \\($c in @\\('magick','convert','pdftoppm','gswin64c','gs','python','python3','py'\\)\\) { $g = Get-Command $c -ErrorAction SilentlyContinue; if \\($g\\) { \"FOUND $c -> $\\($g.Source\\)\" } else { \"missing $c\" } })",
+      "PowerShell(python --version)"
+    ]
+  }
+}
