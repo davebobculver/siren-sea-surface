@@ -167,6 +167,9 @@
   // Each .toc-toggle owns the list named by aria-controls. Open/closed state
   // is remembered per control id so it survives a reload.
   var TOC_STORE = 'siren-paper-toc';
+  // Lists that start closed for a first-time visitor; the markup ships them
+  // closed too so they never flash open before this script runs.
+  var TOC_CLOSED_BY_DEFAULT = ['toc-contents', 'toc-figures'];
   var tocState = {};
   try { tocState = JSON.parse(localStorage.getItem(TOC_STORE) || '{}') || {}; }
   catch (e) { tocState = {}; }
@@ -187,8 +190,11 @@
 
   document.querySelectorAll('.toc-toggle').forEach(function (btn) {
     var id = btn.getAttribute('aria-controls');
-    // default open unless a previous visit closed it
-    setSection(btn, tocState[id] !== false);
+    // a previous visit wins; otherwise fall back to the default for this list
+    var open = typeof tocState[id] === 'boolean'
+      ? tocState[id]
+      : TOC_CLOSED_BY_DEFAULT.indexOf(id) === -1;
+    setSection(btn, open);
 
     btn.addEventListener('click', function () {
       var open = btn.getAttribute('aria-expanded') !== 'true';
