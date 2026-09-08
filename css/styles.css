@@ -79,7 +79,7 @@ a:visited { color: var(--link-visit); }
 
 .paper-title {
   margin: 0 auto .9rem;
-  max-width: 34ch;
+  max-width: 50ch;
   font-size: clamp(1.7rem, 1.1rem + 2.1vw, 2.5rem);
   font-weight: 600;
   line-height: 1.2;
